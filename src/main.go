@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
+	"os/user"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
@@ -42,10 +45,11 @@ func FormatDuration(totalSeconds int) string {
 	return result
 }
 
-func FetchSystem() (string, string, string, string, string) {
+func FetchSystem() (string, string, string, string, string, string, string) {
 	hostInfo, hostErr := host.Info()
 	cpuInfo, cpuErr := cpu.Info()
 	memInfo, memError := mem.VirtualMemory()
+	currentUser, currentUserErr := user.Current()
 
 	sysUptime := FormatDuration(int(hostInfo.Uptime))
 
@@ -61,18 +65,32 @@ func FetchSystem() (string, string, string, string, string) {
 		fmt.Println("Error fetching memory info:", cpuErr)
 	}
 
+	if currentUserErr != nil {
+		fmt.Println("Error fetching memory info:", cpuErr)
+	}
+
+	username := currentUser.Username
+	parts := strings.Split(username, "\\")
+	if len(parts) > 1 {
+		username = parts[1] // Use the part after the backslash
+	}
+
+	hostname := hostInfo.Hostname
 	os := fmt.Sprintf("OS: %s %s", hostInfo.Platform, hostInfo.KernelArch)
 	kernel := fmt.Sprintf("Kernel: %s", hostInfo.KernelVersion)
 	uptime := fmt.Sprintf("Uptime: %s", sysUptime)
 	cpu := fmt.Sprintf("CPU: %s (%s)", cpuInfo[0].ModelName, fmt.Sprint(cpuInfo[0].Cores))
 	memory := fmt.Sprintf("Memory: %sMiB / %sMiB", fmt.Sprint(memInfo.Used/1048576), fmt.Sprint(memInfo.Total/1048576))
 
-	return os, kernel, uptime, cpu, memory
+	return username, hostname, os, kernel, uptime, cpu, memory
 }
 
 func main() {
-	os, kernel, uptime, cpu, memory := FetchSystem()
+	username, hostname, os, kernel, uptime, cpu, memory := FetchSystem()
 
+	usernameAndHostname := fmt.Sprintf("%s@%s", username, hostname)
+
+	fmt.Println(usernameAndHostname)
 	fmt.Println(os)
 	fmt.Println(kernel)
 	fmt.Println(uptime)
